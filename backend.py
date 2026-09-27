@@ -80,8 +80,21 @@ def hotel_agent(state: TravelState):
     query = f"Best hotels for {state['user_query']}"
     hotel_results = tavily_search(query)
 
+    prompt = f"""
+            You are a great summarizer and knows vey well how to summarize a text which can be displayed in webpage
+            Remove unnecessary words and summarize the text without deleting important details.
+            Dont suggest road trip or rail trip. 
+            Try to remain concise
+            The text is here {hotel_results}
+        """
+
+    response = llm.invoke([
+        SystemMessage(content="You are an expert travel planner"),
+        HumanMessage(content=prompt)
+    ])
+
     return {
-        "hotel_results": hotel_results,
+        "hotel_results": response.content,
         "messages": [
             AIMessage(content="Hotel information fetched.")
         ]
@@ -100,7 +113,9 @@ Flight Results:
 Hotel Results:
 {state['hotel_results']}
 
+Suggest local best food place and traditional local items that can be explored
 Make the itinerary practical, budget-aware, and easy to follow.
+And answer in concise without removing important details
 """
 
     response = llm.invoke([
@@ -114,44 +129,45 @@ Make the itinerary practical, budget-aware, and easy to follow.
     }
 
 def final_agent(state: TravelState):
-    final_prompt = f"""
-Generate the final travel response for the user.
+    pass
+#     final_prompt = f"""
+# Generate the final travel response for the user.
 
-User Request:
-{state['user_query']}
+# User Request:
+# {state['user_query']}
 
-Flights:
-{state['flight_results']}
+# Flights:
+# {state['flight_results']}
 
-Hotels:
-{state['hotel_results']}
+# Hotels:
+# {state['hotel_results']}
 
-Itinerary:
-{state['itinerary']}
+# Itinerary:
+# {state['itinerary']}
 
-Format the final answer beautifully using these sections:
+# Format the final answer beautifully using these sections:
 
-1. Trip Summary
-2. Flight Information
-3. Hotel Suggestions
-4. Day-by-Day Itinerary
-5. Estimated Budget
-6. Final Recommendations
+# 1. Trip Summary
+# 2. Flight Information
+# 3. Hotel Suggestions
+# 4. Day-by-Day Itinerary
+# 5. Estimated Budget
+# 6. Final Recommendations
 
-Important:
-- Be clear and practical.
-- Mention that live flight API may not provide ticket prices if pricing is unavailable.
-- Keep the response useful for real travel planning.
-"""
+# Important:
+# - Be clear and practical.
+# - Mention that live flight API may not provide ticket prices if pricing is unavailable.
+# - Keep the response useful for real travel planning.
+# """
 
-    response = llm.invoke([
-        SystemMessage(content="You are a professional AI travel booking assistant."),
-        HumanMessage(content=final_prompt)
-    ])
+#     response = llm.invoke([
+#         SystemMessage(content="You are a professional AI travel booking assistant."),
+#         HumanMessage(content=final_prompt)
+#     ])
 
-    return {
-        "messages": [response]
-    }
+#     return {
+#         "messages": [response]
+#     }
 
 
 #*********** GRAPH ADDITION **********
@@ -176,18 +192,18 @@ graph.add_edge("final_agent", END)
 # =========================
 # PostgreSQL Checkpointer
 # =========================
-DATABASE_URL = get_database_url()
+# DATABASE_URL = get_database_url()
 
-_conn = psycopg.connect(
-    DATABASE_URL,
-    autocommit=True,
-    row_factory=dict_row
-)
+# _conn = psycopg.connect(
+#     DATABASE_URL,
+#     autocommit=True,
+#     row_factory=dict_row
+# )
 
-checkpointer = PostgresSaver(_conn)
-checkpointer.setup()
+# checkpointer = PostgresSaver(_conn)
+# checkpointer.setup()
 
-travel_graph = graph.compile(checkpointer=checkpointer)
+travel_graph = graph.compile()
 
 
 def run_travel_agent(user_input: str, thread_id: str | None = None):

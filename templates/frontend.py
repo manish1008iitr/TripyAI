@@ -1,7 +1,6 @@
 import streamlit as st
-from PIL import Image
-from io import BytesIO
 import requests
+import json
 
 
 # ============================================================
@@ -332,7 +331,7 @@ BACKEND_URL = "http://127.0.0.1:8000"
 # Replace this section with your AI agent/tool.
 # ============================================================
 
-def get_flight_results(user_query: str):
+def get_trip_results(user_query: str):
     response = requests.post(
         f"{BACKEND_URL}/trip-plan",
             json={
@@ -347,97 +346,111 @@ def get_flight_results(user_query: str):
 # ============================================================
 
 if search_clicked:
-
     if not query.strip():
-
         st.warning(
             "Please enter a trip request first."
         )
 
     else:
         with st.spinner("✈️ Searching flights and planning your trip..."):
-            flights = get_flight_results(query)
-            st.markdown(
-                '<div class="section-title">✨ Recommended Flights</div>',
-                unsafe_allow_html=True,
-            )
+            response = get_trip_results(query)
+            trip_evaluation = response.json()
+            if response.status_code != 200:
+                st.error(f"Unable to fetch trip results: HTTP {response.status_code}")
+            else:
+                st.markdown(
+                    '<div class="section-title">✨ Recommended Flights</div>',
+                    unsafe_allow_html=True,
+                )
 
-            st.markdown("""
-                <div class="advice">
-                    <div class="advice-title">
-                        🤖 AI Trip Advice
+                st.markdown("""
+                    <div class="advice">
+                        <div class="advice-title">
+                            🤖 AI Trip Advice
+                        </div>
+                        <div class="advice-text">
+                            I found several flight options for your trip.
+                            If your priority is minimizing travel time,
+                            the direct option is worth considering.
+                            If price is more important, the connecting
+                            options may offer better value.
+                        </div>
                     </div>
-                    <div class="advice-text">
-                        I found several flight options for your trip.
-                        If your priority is minimizing travel time,
-                        the direct option is worth considering.
-                        If price is more important, the connecting
-                        options may offer better value.
-                    </div>
-                </div>
-                """,unsafe_allow_html=True
-            )
+                    """,unsafe_allow_html=True
+                )
 
 # ----------------------------------------------------
 # FLIGHT CARDS
 # ----------------------------------------------------
 
-        for flight in flights:
-            print(flight)
+            for flight in trip_evaluation["flight_results"]:
+                airline_name = flight['airline']['name']
+                flight_num = flight['flight']['number']
+                flight_status = flight["flight_status"]
+                flight_origin = flight['departure']['iata']
+                flight_destination = flight['arrival']['iata']
+                status = flight['flight_status']
+                sched_dep = flight['departure']['scheduled']
+                sched_arr = flight['arrival']['scheduled']
 
-            st.markdown("""
-                <div class="flight-card">
-                    <div style="display:flex;justify-content:space-between; align-items:center">
-                        <div>
-                            <div class="airline">
-                                {flight["airline"]}
+                st.markdown(f"""
+                    <div class="flight-card">
+                        <div style="display:flex;justify-content:space-between; align-items:center">
+                            <div>
+                                <div class="airline">
+                                    {airline_name}
+                                </div>
+                                <div class="flight-number">
+                                    {flight_num}
+                                </div>
                             </div>
-                            <div class="flight-number">
-                                {flight["flight_number"]}
-                            </div>
-                        </div>
-                        <div>
-                            <div class="price">
-                                {flight["price"]}
-                            </div>
-                            <div class="price-label">
-                                per traveller
+                            <div>
+                                <div class="price">
+                                    {flight_status}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div style= "display:grid; grid-template-columns:1fr 1fr 1fr; "
-                                "gap:20px; align-items:center; margin-top:25px;">
-                        <div>
-                            <div class="airport-code">
-                                {flight["origin"]}
+                        <div style= "display:grid; grid-template-columns:1fr 1fr 1fr; "
+                                    "gap:20px; align-items:center; margin-top:25px;">
+                            <div>
+                                <div class="airport-code">
+                                    {flight_origin}
+                                </div>
+                                <div class="airport-time">
+                                    {sched_dep}
+                                </div>
                             </div>
-                            <div class="airport-time">
-                                {flight["origin_time"]}
+                            <div>
+                                <div class="route-line">
+                                    ───── ✈ ─────
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <div class="route-line">
-                                ───── ✈ ─────
-                            </div>
-                            <div class="duration">
-                                {flight["duration"]}
-                            </div>
-                            <div class="stops">
-                                {flight["stops"]}
-                            </div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="airport-code">
-                                {flight["destination"]}
-                            </div>
-                            <div class="airport-time">
-                                {flight["destination_time"]}
+                            <div style="text-align:right">
+                                <div class="airport-code">
+                                    {flight_destination}
+                                </div>
+                                <div class="airport-time">
+                                    {sched_arr}
+                                </div>
                             </div>
                         </div>
                     </div>
+                    """,unsafe_allow_html=True
+                )
+            hotel_eval = trip_evaluation["hotel_results"]
+            st.markdown(f"""
+                <div>
+                    {hotel_eval}
                 </div>
-                """,unsafe_allow_html=True
-            )
+            """, unsafe_allow_html=True)
+            
+            itinerary_eval = trip_evaluation["itinerary"]
+            st.markdown(f"""
+                <div>
+                    {itinerary_eval}
+                </div>
+            """, unsafe_allow_html=True)
+            
 
 #             # Button outside HTML so Streamlit can handle it.
 #             if st.button(
@@ -450,18 +463,18 @@ if search_clicked:
 #                 )
 
 
-# # ============================================================
-# # FOOTER
-# # ============================================================
+# ============================================================
+# FOOTER
+# ============================================================
 
-# st.markdown(
-#     """
-#     <div class="footer">
-#         ✈️ AI Trip Planner · Flight information powered by your
-#         configured flight data provider
-#     </div>
-#     """,
-#     unsafe_allow_html=True,
-# )
+st.markdown(
+    """
+    <div class="footer">
+        ✈️ AI Trip Planner · Flight information powered by your
+        configured flight data provider
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 

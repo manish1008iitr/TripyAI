@@ -64,7 +64,7 @@ def search_flights(departure_iata, destination_iata):
         'access_key': AVIATIONSTACK_API_KEY,
         'dep_iata': departure_iata.upper(),  # Boarding airport code
         'arr_iata': destination_iata.upper(),  # Destination airport code
-        'limit': 20                              # Number of results to return
+        'limit': 8                              # Number of results to return
     }
     response = requests.get(AVIATIONSTACK_URL, params=params).json()
     flights = response.get('data', [])
@@ -81,12 +81,12 @@ def final_flight_result(query):
         flights = response["summary"]
     return flights
 
-    # for flight in flights:
-    #     airline_name = flight['airline']['name']
-    #     flight_num = flight['flight']['number']
-    #     status = flight['flight_status']
-    #     sched_dep = flight['departure']['scheduled']
-    #     sched_arr = flight['arrival']['scheduled']
+    for flight in flights:
+        airline_name = flight['airline']['name']
+        flight_num = flight['flight']['number']
+        status = flight['flight_status']
+        sched_dep = flight['departure']['scheduled']
+        sched_arr = flight['arrival']['scheduled']
             
     #     print(f"✈️ Airline: {airline_name} | Flight: {flight_num}")
     #     print(f"   Status: {status.upper()}")
