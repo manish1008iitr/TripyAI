@@ -19,9 +19,7 @@ def tavily_search(query):
         title = r.get("title", "unknown")
         url = r.get("url", "")
         snippet = r.get("content", "").strip()
-
-        if len(snippet) > 300:
-            snippet = snippet[:300].rsplit(" ",1)[0] + "..."
+        
         results.append( f"{i}. **{title}** \n {url}\n {snippet}")
 
     return "\n\n".join(results)
