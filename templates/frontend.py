@@ -45,7 +45,7 @@ st.markdown(
 
     .hero {
         position: relative;
-        height: 390px;
+        height: 200px;
         border-radius: 24px;
         overflow: hidden;
 
@@ -64,6 +64,7 @@ st.markdown(
         align-items: center;
         padding: 55px;
         margin-bottom: 30px;
+        margin-top: 10px
     }
 
     .hero-content {
@@ -313,6 +314,18 @@ search_clicked = st.button(
 )
 
 
+BACKEND_URL = "http://127.0.0.1:8000"
+
+# if st.button("Search Flights"):
+#     
+
+#     
+#             # st.json(response.json())
+#             if response.status_code == 200:
+#                 st.success("Trip plan generated!")
+#                 st.markdown(response)
+
+
 # ============================================================
 # MOCK FLIGHT DATA
 #
@@ -320,51 +333,13 @@ search_clicked = st.button(
 # ============================================================
 
 def get_flight_results(user_query: str):
-
-    # --------------------------------------------------------
-    # TODO:
-    #
-    # Replace this function with:
-    #
-    # result = your_agent.invoke(user_query)
-    #
-    # --------------------------------------------------------
-
-    return [
-        {
-            "airline": "Air India",
-            "flight_number": "AI 101",
-            "origin": "DEL",
-            "origin_time": "10:30",
-            "destination": "LHR",
-            "destination_time": "15:45",
-            "duration": "9h 45m",
-            "stops": "1 stop",
-            "price": "₹45,200",
-        },
-        {
-            "airline": "Emirates",
-            "flight_number": "EK 513",
-            "origin": "DEL",
-            "origin_time": "04:15",
-            "destination": "LHR",
-            "destination_time": "13:20",
-            "duration": "10h 35m",
-            "stops": "1 stop",
-            "price": "₹48,600",
-        },
-        {
-            "airline": "British Airways",
-            "flight_number": "BA 142",
-            "origin": "DEL",
-            "origin_time": "01:35",
-            "destination": "LHR",
-            "destination_time": "06:10",
-            "duration": "10h 05m",
-            "stops": "Direct",
-            "price": "₹57,800",
-        },
-    ]
+    response = requests.post(
+        f"{BACKEND_URL}/trip-plan",
+            json={
+                "query": query
+            }
+        )
+    return response
 
 
 # ============================================================
@@ -380,152 +355,113 @@ if search_clicked:
         )
 
     else:
-
-        with st.spinner(
-            "✈️ Searching flights and planning your trip..."
-        ):
-
+        with st.spinner("✈️ Searching flights and planning your trip..."):
             flights = get_flight_results(query)
+            st.markdown(
+                '<div class="section-title">✨ Recommended Flights</div>',
+                unsafe_allow_html=True,
+            )
 
-        st.markdown(
-            '<div class="section-title">✨ Recommended Flights</div>',
-            unsafe_allow_html=True,
-        )
-
-        # ----------------------------------------------------
-        # AI ADVICE
-        # ----------------------------------------------------
-
-        st.markdown(
-            """
-            <div class="advice">
-
-                <div class="advice-title">
-                    🤖 AI Trip Advice
+            st.markdown("""
+                <div class="advice">
+                    <div class="advice-title">
+                        🤖 AI Trip Advice
+                    </div>
+                    <div class="advice-text">
+                        I found several flight options for your trip.
+                        If your priority is minimizing travel time,
+                        the direct option is worth considering.
+                        If price is more important, the connecting
+                        options may offer better value.
+                    </div>
                 </div>
+                """,unsafe_allow_html=True
+            )
 
-                <div class="advice-text">
-                    I found several flight options for your trip.
-                    If your priority is minimizing travel time,
-                    the direct option is worth considering.
-                    If price is more important, the connecting
-                    options may offer better value.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # ----------------------------------------------------
-        # FLIGHT CARDS
-        # ----------------------------------------------------
+# ----------------------------------------------------
+# FLIGHT CARDS
+# ----------------------------------------------------
 
         for flight in flights:
+            print(flight)
 
             st.markdown("""
                 <div class="flight-card">
-
                     <div style="display:flex;justify-content:space-between; align-items:center">
                         <div>
                             <div class="airline">
                                 {flight["airline"]}
                             </div>
-
                             <div class="flight-number">
                                 {flight["flight_number"]}
                             </div>
-
                         </div>
-
                         <div>
-
                             <div class="price">
                                 {flight["price"]}
                             </div>
-
                             <div class="price-label">
                                 per traveller
                             </div>
-
                         </div>
-
                     </div>
-
-
                     <div style= "display:grid; grid-template-columns:1fr 1fr 1fr; "
                                 "gap:20px; align-items:center; margin-top:25px;">
-
                         <div>
-
                             <div class="airport-code">
                                 {flight["origin"]}
                             </div>
-
                             <div class="airport-time">
                                 {flight["origin_time"]}
                             </div>
-
                         </div>
-
-
                         <div>
-
                             <div class="route-line">
-                                # <p>───── ✈ ─────</p>
+                                ───── ✈ ─────
                             </div>
-
                             <div class="duration">
                                 {flight["duration"]}
                             </div>
-
                             <div class="stops">
                                 {flight["stops"]}
                             </div>
-
                         </div>
-
-
                         <div style="text-align:right">
-
                             <div class="airport-code">
                                 {flight["destination"]}
                             </div>
-
                             <div class="airport-time">
                                 {flight["destination_time"]}
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
-                """,
-                unsafe_allow_html=True,
+                """,unsafe_allow_html=True
             )
 
-            # Button outside HTML so Streamlit can handle it.
-            if st.button(
-                f"View {flight['flight_number']}",
-                key=f"flight_{flight['flight_number']}",
-            ):
-                st.info(
-                    f"You selected {flight['airline']} "
-                    f"{flight['flight_number']}."
-                )
+#             # Button outside HTML so Streamlit can handle it.
+#             if st.button(
+#                 f"View {flight['flight_number']}",
+#                 key=f"flight_{flight['flight_number']}",
+#             ):
+#                 st.info(
+#                     f"You selected {flight['airline']} "
+#                     f"{flight['flight_number']}."
+#                 )
 
 
-# ============================================================
-# FOOTER
-# ============================================================
+# # ============================================================
+# # FOOTER
+# # ============================================================
 
-st.markdown(
-    """
-    <div class="footer">
-        ✈️ AI Trip Planner · Flight information powered by your
-        configured flight data provider
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# st.markdown(
+#     """
+#     <div class="footer">
+#         ✈️ AI Trip Planner · Flight information powered by your
+#         configured flight data provider
+#     </div>
+#     """,
+#     unsafe_allow_html=True,
+# )
+
+

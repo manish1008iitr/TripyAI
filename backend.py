@@ -21,7 +21,7 @@ from langchain_core.messages import (
 )
 from langchain_groq import ChatGroq
 from tools.tavily_tool import tavily_search
-from tools.flight_tool import search_flights
+from tools.flight_tool import final_flight_result
 
 def get_database_url():
     database_url = os.getenv("DATABASE_URL")
@@ -44,7 +44,7 @@ if not GROQ_API_KEY:
     raise ValueError("GROQ_API_KEY is missing. Please add it to your .env file.")
 
 llm = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model= os.getenv("MODEL_NAME"),
     api_key= os.getenv("GROQ_API_KEY"),
     temperature=0,  # Keeping temperature at 0 ensures higher determinism for data extraction
     model_kwargs={
@@ -67,7 +67,7 @@ class TravelState(TypedDict):
 
 def flight_agent(state: TravelState):
     query = state["user_query"]
-    flight_data = search_flights(query)
+    flight_data = final_flight_result(query)
 
     return {
         "flight_results": flight_data,
@@ -223,17 +223,5 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
         "answer": final_answer,
         "flight_results": result.get("flight_results", ""),
         "hotel_results": result.get("hotel_results", ""),
-        "itinerary": result.get("itinerary", ""),
-        "llm_calls": result.get("llm_calls", 0),
+        "itinerary": result.get("itinerary", "")
     }
-
-
-
-
-
-
-
-
-
-
-

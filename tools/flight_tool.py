@@ -22,9 +22,10 @@ load_dotenv()
 
 #LLM CREATION
 llm = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model=os.getenv("MODEL_NAME"),
+    api_key= os.getenv("GROQ_API_KEY"),
     temperature=0,  # Keeping temperature at 0 ensures higher determinism for data extraction
-    model_kwargs={
+    model_kwargs = {
         "tool_choice": "auto"  # or "required", or a specific tool definition
     }
 )
@@ -59,7 +60,6 @@ def search_codes(query):
         "summary":summary}
 
 def search_flights(departure_iata, destination_iata):
-    print(departure_iata, destination_iata)
     params = {
         'access_key': AVIATIONSTACK_API_KEY,
         'dep_iata': departure_iata.upper(),  # Boarding airport code
@@ -73,28 +73,27 @@ def search_flights(departure_iata, destination_iata):
     else:
         return flights
 
-# def main():
-#     query = input("type here \n")
-#     response = search_codes(query)
-#     if response["departure_code"] and response["destination_code"]:
-#         flights = search_flights(response["departure_code"], response["destination_code"])
-#     else:
-#         flights = response["summary"]
+def final_flight_result(query):
+    response = search_codes(query)
+    if response["departure_code"] and response["destination_code"]:
+        flights = search_flights(response["departure_code"], response["destination_code"])
+    else:
+        flights = response["summary"]
+    return flights
 
-#     for flight in flights:
-#         airline_name = flight['airline']['name']
-#         flight_num = flight['flight']['number']
-#         status = flight['flight_status']
-#         sched_dep = flight['departure']['scheduled']
-#         sched_arr = flight['arrival']['scheduled']
+    # for flight in flights:
+    #     airline_name = flight['airline']['name']
+    #     flight_num = flight['flight']['number']
+    #     status = flight['flight_status']
+    #     sched_dep = flight['departure']['scheduled']
+    #     sched_arr = flight['arrival']['scheduled']
             
-#         print(f"✈️ Airline: {airline_name} | Flight: {flight_num}")
-#         print(f"   Status: {status.upper()}")
-#         print(f"   Departure: {sched_dep}")
-#         print(f"   Arrival:   {sched_arr}")
-#         print("-" * 40)
-    
-# main()
+    #     print(f"✈️ Airline: {airline_name} | Flight: {flight_num}")
+    #     print(f"   Status: {status.upper()}")
+    #     print(f"   Departure: {sched_dep}")
+    #     print(f"   Arrival:   {sched_arr}")
+    #     print("-" * 40)
+
 
     
 
