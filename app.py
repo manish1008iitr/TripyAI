@@ -24,3 +24,7 @@ async def trip_plan(request: TripRequest):
     # print(result["flight_results"])
     # result = json.loads(result)
     return result
+
+@app.get("/health")
+async def health_check():
+    return "the app is working well"
