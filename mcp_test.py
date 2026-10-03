@@ -18,34 +18,20 @@ Server = {
     },
 }
 
-llm = ChatGroq(
-    model= os.getenv("MODEL_NAME"),
-    api_key= CHATGROQ_API_KEY,
-    temperature=0,  # Keeping temperature at 0 ensures higher determinism for data extraction
-    model_kwargs={
-        "tool_choice": "auto"  # or "required", or a specific tool definition
-    }
-)
-
-
-async def main():
+async def get_tavily_search_tool():
     client = MultiServerMCPClient(Server)
     tools = await client.get_tools()
-    print("Available tools:", [tool.name for tool in tools])
     tavely_search_tool = next(tool for tool in tools if tool.name == "tavily_search")   
 
-    # Alternatively, use a LangChain/LangGraph agent which handles tool execution loop
-    # agent = create_agent(llm, tools)
-    result = await tavely_search_tool.ainvoke({"query":"Tell me latest news about AI"})
-    print(result)
+async def get_tavily_result(query: str) -> str:
+    tavely_search_tool = await get_tavily_search_tool()
 
+    #lets invoke the tavely search tool with a query
+    result = await tavely_search_tool.invoke({
+        "query":query
+    })
+    return result 
 
-    # llm_with_tool = llm.bind_tools([tavely_search_tool])
-    # response = await llm_with_tool.ainvoke("Tell me latest news about AI")
-    # print(response.content)
-
-if __name__ == "__main__":
-    asyncio.run(main())
 
 
 

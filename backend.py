@@ -20,8 +20,11 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_groq import ChatGroq
-from tools.tavily_tool import tavily_search
 from tools.flight_tool import final_flight_result
+
+from mcp_test import get_tavily_result
+
+
 
 def get_database_url():
     database_url = os.getenv("DATABASE_URL")
@@ -78,7 +81,7 @@ def flight_agent(state: TravelState):
 
 def hotel_agent(state: TravelState):
     query = f"Best hotels for {state['user_query']}"
-    hotel_results = tavily_search(query)
+    hotel_results = get_tavily_result(query)
 
     prompt = f"""
             You are a great summarizer and knows vey well how to summarize a text which can be displayed in webpage
@@ -171,6 +174,7 @@ def final_agent(state: TravelState):
 
 
 #*********** GRAPH ADDITION **********
+
 
 
 graph = StateGraph(TravelState)
