@@ -3,6 +3,10 @@ from pydantic import BaseModel
 from backend import run_travel_agent
 import json
 
+#Nested events lops
+import nest_asyncio
+nest_asyncio.apply()
+
 app = FastAPI()
 
 class TripRequest(BaseModel):
