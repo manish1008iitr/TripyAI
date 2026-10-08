@@ -2,11 +2,11 @@ from __future__ import annotations
 import os
 
 from typing import Any
-import re
-import airportsdata
-import pycountry
-from dotenv import load_dotenv
 import requests
+
+
+#To load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
 
@@ -14,11 +14,11 @@ load_dotenv()
 from fastmcp import FastMCP
 mcp = FastMCP("Flight Search Tool")
 
-AVIATIONSTACK_API_KEY = os.getenv("AVIATIONSTACK_API_KEY")
+AVIATION_STACK_API_KEY = os.getenv("AVIATION_STACK_API_KEY")
 DEFAULT_ORIGIN_IATA = os.getenv("DEFAULT_ORIGIN_IATA")
 AVIATIONSTACK_URL = "https://api.aviationstack.com/v1/flights"
 
-REQUEST_TIMEOUT = 15
+
 
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -35,22 +35,23 @@ llm = ChatGroq(
     }
 )
 
-@mcp.tool
+
 def search_codes(query):
-    class find_dest_board(BaseModel):
+    """Get airport codes codes of the  source and destination major airports"""
+    class find_aiport_codes(BaseModel):
         departure_code:str = Field(description = "boarding aiport code mention in the quesry")
         destination_code:str = Field(description= "destination aiport code mention in the query")
-        summary:str = Field(description="when you dont able to find a suitable airport")
 
     ## STRCUTURED LLM CREATION
-    structured_llm = llm.with_structured_output(find_dest_board, method="json_schema")
+    structured_llm = llm.with_structured_output(find_aiport_codes, method="json_schema")
 
     # Creating prompt template
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert in finding boarding and destination airport code from user query"
-        "You are supposed to find a suitable airport in nearby based on boarding place and destination place"
-        "If you dont able to find a suitable aiport simply answer please mention particular place"
-        "Answer only in term of destination and boarding airport code"),
+
+        "Important instruction to follow"
+            "Find a suitable airport in nearby based on boarding place and destination place"
+            "Answer only in term of destination and boarding airport code"),
         ("human", "{query}")
     ])
 
@@ -59,32 +60,33 @@ def search_codes(query):
 
     departure_code = result.departure_code
     destination_code = result.destination_code
-    summary = result.summary
 
-    return {"departure_code":departure_code,
-        "destination_code": destination_code,
-        "summary":summary}
+    return {
+        "departure_code":departure_code,
+        "destination_code": destination_code
+        }
 
-
-@mcp.tool
 def search_flights(departure_iata, destination_iata):
+    """Search flights between a source and destination."""
     params = {
-        'access_key': AVIATIONSTACK_API_KEY,
+        'access_key': AVIATION_STACK_API_KEY,
         'dep_iata': departure_iata.upper(),  # Boarding airport code
         'arr_iata': destination_iata.upper(),  # Destination airport code
         'limit': 8                              # Number of results to return
     }
     response = requests.get(AVIATIONSTACK_URL, params=params).json()
     flights = response.get('data', [])
-    if not flights:
-        return "No flight is found between them"
+    if flights:
+        return flights 
     else:
-        return flights
+        return "No flight is found between them"
 
 
 @mcp.tool(description="Give result related to flight details")
-def final_flight_result(query:str):
+async def final_flight_result(query:str):
+    """Get available flights between a source and destination."""
     response = search_codes(query)
+    print("Codes are ", response)
     if response["departure_code"] and response["destination_code"]:
         flights = search_flights(response["departure_code"], response["destination_code"])
     else:
