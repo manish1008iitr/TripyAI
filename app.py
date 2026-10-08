@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from backend import run_travel_agent
 import json
 
+import nest_asyncio
+nest_asyncio.apply()
+
 #Nested events lops
 import nest_asyncio
 nest_asyncio.apply()
@@ -22,7 +25,7 @@ def root():
 async def trip_plan(request: TripRequest):
     query = request.query
     print("query recieved")
-    result = run_travel_agent(query,"test_user")
+    result = await run_travel_agent(query,"test_user_01")
     for i in result["flight_results"]:
         print(i)
     # print(result["flight_results"])

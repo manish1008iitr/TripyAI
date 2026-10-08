@@ -3,16 +3,14 @@ import certifi
 from  dotenv import load_dotenv
 load_dotenv()
 
-
 from typing import TypedDict, Annotated
 import operator 
 import uuid
 
-import psycopg 
-from psycopg.rows import dict_row
 
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.postgres import PostgresSaver
+from langchain.agents import create_agent
+
 from langchain_core.messages import (
     AnyMessage,
     HumanMessage,
@@ -20,25 +18,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_groq import ChatGroq
-from tools.flight_tool import final_flight_result
-
-from mcp_test import get_tavily_result
-
-
-
-def get_database_url():
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        raise ValueError(
-            "DATABASE_URL is missing. Please add your Render PostgreSQL External Database URL to .env"
-        )
-
-    if "sslmode=" not in database_url:
-        separator = "&" if "?" in database_url else "?"
-        database_url = f"{database_url}{separator}sslmode=require"
-
-    return database_url
+from mcp_client import get_tavily_tools, get_flight_info_tools, get_weather_info_tools
 
 
 ## SETTING UP THE LLM
@@ -48,7 +28,7 @@ if not GROQ_API_KEY:
 
 llm = ChatGroq(
     model= os.getenv("MODEL_NAME"),
-    api_key= os.getenv("GROQ_API_KEY"),
+    api_key= GROQ_API_KEY,
     temperature=0,  # Keeping temperature at 0 ensures higher determinism for data extraction
     model_kwargs={
         "tool_choice": "auto"  # or "required", or a specific tool definition
@@ -64,72 +44,73 @@ class TravelState(TypedDict):
     llm_calls: int
 
 
-#******************
-        #Flight Agent
-#******************
+#**************************************************************************
+                            #Flight Agent
+#***************************************************************************
 
-def flight_agent(state: TravelState):
-    query = state["user_query"]
-    flight_data = final_flight_result(query)
-
-    return {
-        "flight_results": flight_data,
-        "messages": [
-            AIMessage(content="Flight results fetched.")
-        ]
-    }
-
+async def flight_agent(state: TravelState):
+    print("function reached till here")
+    result = await get_flight_info_tools(state["user_query"])
+    print(result)
+    
 def hotel_agent(state: TravelState):
-    query = f"Best hotels for {state['user_query']}"
-    hotel_results = get_tavily_result(query)
+    pass
+#     query = f"Best hotels for {state['user_query']}"
+#     hotel_results = get_tavily_result(query)
 
-    prompt = f"""
-            You are a great summarizer and knows vey well how to summarize a text which can be displayed in webpage
-            Remove unnecessary words and summarize the text without deleting important details.
-            Dont suggest road trip or rail trip. 
-            Try to remain concise
-            The text is here {hotel_results}
-        """
+#     prompt = f"""
+#             You are a great summarizer and knows vey well how to summarize a text which can be displayed in webpage
+#             Remove unnecessary words and summarize the text without deleting important details.
+#             Dont suggest road trip or rail trip. 
+#             Try to remain concise and asnwer within 200 words only
+#             Also give a heading at above in larger font like "Hotel Suggestions" with a underline
+#             The text is here {hotel_results}
+#         """
 
-    response = llm.invoke([
-        SystemMessage(content="You are an expert travel planner"),
-        HumanMessage(content=prompt)
-    ])
+#     response = llm.invoke([
+#         SystemMessage(content="You are an expert travel planner"),
+#         HumanMessage(content=prompt)
+#     ])
 
-    return {
-        "hotel_results": response.content,
-        "messages": [
-            AIMessage(content="Hotel information fetched.")
-        ]
-    }
+#     return {
+#         "hotel_results": response.content,
+#         "messages": [
+#             AIMessage(content="Hotel information fetched.")
+#         ]
+#     }
 
 def itinerary_agent(state: TravelState):
-    prompt = f"""
-Create a complete travel itinerary.
+    pass
+#     prompt = f"""
+# Create a complete travel itinerary.
 
-User Query:
-{state['user_query']}
+# User Query:
+# {state['user_query']}
 
-Flight Results:
-{state['flight_results']}
+# Flight Results:
+# {state['flight_results']}
 
-Hotel Results:
-{state['hotel_results']}
+# Hotel Results:
+# {state['hotel_results']}
 
-Suggest local best food place and traditional local items that can be explored
-Make the itinerary practical, budget-aware, and easy to follow.
-And answer in concise without removing important details
-"""
+# Suggest local best food place and traditional local items that can be explored
+# Make the itinerary practical, budget-aware, and easy to follow.
+# Answer only in 150 words without removing important details
+# Also give a heading at above in larger font like "Itinerary Plan" with a underline
+# """
 
-    response = llm.invoke([
-        SystemMessage(content="You are an expert travel planner."),
-        HumanMessage(content=prompt)
-    ])
+#     response = llm.invoke([
+#         SystemMessage(content="You are an expert travel planner."),
+#         HumanMessage(content=prompt)
+#     ])
 
-    return {
-        "itinerary": response.content,
-        "messages": [response]
-    }
+#     return {
+#         "itinerary": response.content,
+#         "messages": [response]
+#     }
+
+
+
 
 def final_agent(state: TravelState):
     pass
@@ -193,24 +174,11 @@ graph.add_edge("itinerary_agent", "final_agent")
 graph.add_edge("final_agent", END)
 
 
-# =========================
-# PostgreSQL Checkpointer
-# =========================
-# DATABASE_URL = get_database_url()
-
-# _conn = psycopg.connect(
-#     DATABASE_URL,
-#     autocommit=True,
-#     row_factory=dict_row
-# )
-
-# checkpointer = PostgresSaver(_conn)
-# checkpointer.setup()
-
 travel_graph = graph.compile()
 
 
-def run_travel_agent(user_input: str, thread_id: str | None = None):
+async def run_travel_agent(user_input: str, thread_id: str | None = None):
+    print("query reached run travel agent")
     if not thread_id:
         thread_id = f"user_{uuid.uuid4().hex}"
 
@@ -220,7 +188,7 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
         }
     }
 
-    initial_state: TravelState = {
+    state_params: TravelState = {
             "messages": [
                 HumanMessage(content=user_input)
             ],
@@ -231,12 +199,13 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
             "llm_calls": 0
     }
 
-    result = travel_graph.invoke(
-        initial_state,
+    result = await travel_graph.ainvoke(
+        state_params,
         config=config
     )
 
     final_answer = result["messages"][-1].content
+    print(final_answer)
 
     return {
         "thread_id": thread_id,
@@ -245,3 +214,4 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
         "hotel_results": result.get("hotel_results", ""),
         "itinerary": result.get("itinerary", "")
     }
+
